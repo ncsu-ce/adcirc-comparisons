@@ -56,9 +56,9 @@ class Nodeset(Printable):
 
     def _find_all_nodes(self):
 
-        self.message('Finding common nodes')
+        self.message('Finding all nodes nodes')
         self._common_nodes = set()
-        self._uncommon_nodes = [set()]*self._num_meshes
+        self._uncommon_nodes = dict()
         appears = defaultdict(lambda: array('b', [0] * self._num_meshes))
 
         for m in range(self._num_meshes):
@@ -72,14 +72,19 @@ class Nodeset(Printable):
 
                     appears[nodal_coordinates[n].tobytes()][m] = 1
 
-        # FIGURE THIS OUT YA IDIOT
-        # for key, counts in appears.items():
-        #
-        #     for m in range(self._num_meshes):
-        #
-        #         if counts[m] == self._num_meshes:
-        #
-        #             self._common_nodes.add(key)
+        for key, counts in appears.items():
+
+            if counts.count(1) == self._num_meshes:
+
+                self._common_nodes.add(key)
+
+            else:
+
+                self._uncommon_nodes[key] = counts
+
+        self.message('Found {} common nodes'.format(len(self._common_nodes)))
+        self.message('Found {} uncommon nodes'.format(len(self._uncommon_nodes)))
+
 
     def _find_only_common_nodes(self):
 
