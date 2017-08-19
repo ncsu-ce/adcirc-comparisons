@@ -24,36 +24,6 @@ class Nodeset(Printable):
         else:
             self._find_only_common_nodes()
 
-    def _calculate_bounds(self):
-
-        self.message('Calculating bounding box')
-        lls = np.empty((self._num_meshes, 2))
-        urs = np.empty((self._num_meshes, 2))
-
-        for m in range(self._num_meshes):
-
-            lls[m] = self._meshes[m].lower_left_bound()
-            urs[m] = self._meshes[m].upper_right_bound()
-
-        self._ll = lls.max(axis=0)
-        self._ur = urs.min(axis=0)
-        self.message('Bounding box:', self._ll, self._ur)
-
-    def _coordinates_in_range(self, _mesh_index):
-
-        # Get all nodal coordinates
-        nodal_coordinates = self._meshes[_mesh_index].node_coordinates()
-
-        # mask out values not in the bounding box
-        in_range = np.all(
-            np.logical_and(
-                self._ll <= nodal_coordinates,
-                self._ur >= nodal_coordinates
-            ), axis=1
-        )
-
-        return nodal_coordinates, in_range
-
     def _find_all_nodes(self):
 
         self.message('Finding all nodes nodes')
@@ -86,6 +56,52 @@ class Nodeset(Printable):
         self.message('Found {} uncommon nodes'.format(len(self._uncommon_nodes)))
 
 
+        self.message('Finding common elements')
+        centroid_counter = Counter()
+        common_centroids = 0
+        uncommon_centroids = set()
+        for m in range(self._num_meshes):
+
+            centroids, in_range = self._centroids_in_range(m)
+
+            for c in range(centroids.shape[0]):
+
+                if in_range[c]:
+
+                    centroid_counter[centroids[c].tobytes()] += 1
+
+        for key, counts in centroid_counter.items():
+
+            if counts == self._num_meshes:
+
+                common_centroids += 1
+
+            else:
+
+                uncommon_centroids.add(key)
+
+        uncommon_centroids_array = np.empty((len(uncommon_centroids), 2))
+
+        for i, key in enumerate(uncommon_centroids):
+
+            uncommon_centroids_array[i] = np.fromstring(key, np.float64, 2)
+
+        self.message('Found {} common elements'.format(common_centroids))
+        self.message('Found {} uncommon elements'.format(len(uncommon_centroids)))
+
+        # We can't use np.isin because it doesn't operate on 2D arrays. Let's explort
+        # what we can do with custom data types...
+        for m in range(self._num_meshes):
+
+            centroids, in_range = self._centroids_in_range(m)
+
+            ### WARNING: GARBAGE
+            searchable_centroids = np.isin(centroids[in_range], uncommon_centroids_array, True)
+
+            print(searchable_centroids)
+
+
+
     def _find_only_common_nodes(self):
 
         self.message('Finding common nodes')
@@ -112,3 +128,36 @@ class Nodeset(Printable):
                 self._common_nodes.add(key)
 
         self.message('Found {} common nodes'.format(len(self._common_nodes)))
+
+    def _calculate_bounds(self):
+
+        self.message('Calculating bounding box')
+        lls = np.empty((self._num_meshes, 2))
+        urs = np.empty((self._num_meshes, 2))
+
+        for m in range(self._num_meshes):
+            lls[m] = self._meshes[m].lower_left_bound()
+            urs[m] = self._meshes[m].upper_right_bound()
+
+        self._ll = lls.max(axis=0)
+        self._ur = urs.min(axis=0)
+        self.message('Bounding box:', self._ll, self._ur)
+
+    def _coordinates_in_range(self, _mesh_index):
+
+        nodal_coordinates = self._meshes[_mesh_index].node_coordinates()
+        return nodal_coordinates, self._array_in_range(nodal_coordinates)
+
+    def _centroids_in_range(self, _mesh_index):
+
+        centroids = self._meshes[_mesh_index].centroids()
+        return centroids, self._array_in_range(centroids)
+
+    def _array_in_range(self, arr):
+
+        return np.all(
+            np.logical_and(
+                self._ll <= arr,
+                self._ur >= arr
+            ), axis=1
+        )
