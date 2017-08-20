@@ -1,5 +1,6 @@
 from Utilities.Printable import Printable
 import numpy as np
+import scipy.spatial as sp
 from array import array
 from collections import defaultdict, Counter
 
@@ -26,7 +27,7 @@ class Nodeset(Printable):
 
     def _find_all_nodes(self):
 
-        self.message('Finding all nodes nodes')
+        self.message('Finding all nodes')
         self._common_nodes = set()
         self._uncommon_nodes = dict()
         appears = defaultdict(lambda: array('b', [0] * self._num_meshes))
@@ -57,50 +58,63 @@ class Nodeset(Printable):
 
 
         self.message('Finding common elements')
-        centroid_counter = Counter()
         common_centroids = 0
-        uncommon_centroids = set()
+        uncommon_centroids = 0
+        centroid_indices = defaultdict(lambda: array('l', [-1] * self._num_meshes))
+
         for m in range(self._num_meshes):
 
             centroids, in_range = self._centroids_in_range(m)
 
+            # If the centroid appears, keep track of the index
             for c in range(centroids.shape[0]):
 
                 if in_range[c]:
 
-                    centroid_counter[centroids[c].tobytes()] += 1
+                    centroid_indices[centroids[c].tobytes()][m] = c
 
-        for key, counts in centroid_counter.items():
+        centroid_dicts = [dict()] * self._num_meshes
 
-            if counts == self._num_meshes:
+        for key, indices in centroid_indices.items():
 
-                common_centroids += 1
+            if indices.count(-1) != 0:
+
+                uncommon_centroids += 1
+
+                for m in range(self._num_meshes):
+
+                    if indices[m] != -1:
+
+                        centroid_dicts[m][key] = indices[m]
 
             else:
 
-                uncommon_centroids.add(key)
-
-        uncommon_centroids_array = np.empty((len(uncommon_centroids), 2))
-
-        for i, key in enumerate(uncommon_centroids):
-
-            uncommon_centroids_array[i] = np.fromstring(key, np.float64, 2)
+                common_centroids += 1
 
         self.message('Found {} common elements'.format(common_centroids))
-        self.message('Found {} uncommon elements'.format(len(uncommon_centroids)))
+        self.message('Found {} uncommon elements'.format(uncommon_centroids))
 
-        # We can't use np.isin because it doesn't operate on 2D arrays. Let's explort
-        # what we can do with custom data types...
+
+        self.message('Building searchable data structure to compute overlaps')
+        centroid_arrays = [None] * self._num_meshes
+
         for m in range(self._num_meshes):
 
-            centroids, in_range = self._centroids_in_range(m)
+            centroid_dict = centroid_dicts[m]
+            num_centroids = len(centroid_dict)
+            centroid_arrays[m] = np.empty((num_centroids, 2), dtype=np.float64)
 
-            ### WARNING: GARBAGE
-            searchable_centroids = np.isin(centroids[in_range], uncommon_centroids_array, True)
+            for i, key in enumerate(centroid_dict.keys()):
 
-            print(searchable_centroids)
+                centroid_arrays[m][i] = np.fromstring(key, np.float64, 2)
 
+        centroid_trees = [None] * self._num_meshes
 
+        for m in range(self._num_meshes):
+
+            centroid_trees[m] = sp.cKDTree(centroid_arrays[m])
+
+        self.message('Done')
 
     def _find_only_common_nodes(self):
 

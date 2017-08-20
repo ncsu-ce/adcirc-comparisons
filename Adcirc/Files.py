@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from DataStructures.Datatypes import *
 from Utilities.Printable import Printable
 
 class File(Printable):
@@ -25,15 +26,13 @@ class Fort14(File):
         self._ll = None
         self._ur = None
 
-        # print('\N{WHITE BULLET} Loading mesh (fort.14)')
-
         self.header = self.f.readline()
         dat = self.f.readline().split()
         self.num_elements = int(dat[0])
         self.num_nodes = int(dat[1])
 
-        self._nodes = np.empty([self.num_nodes, 2], dtype=np.float64)
-        self._elements = np.empty([self.num_elements, 3], dtype=np.int32)
+        self._nodes = np.empty((self.num_nodes, 2), dtype=np.float64)
+        self._elements = np.empty((self.num_elements, 3), dtype=np.uint32)
 
         nn_to_ni = dict()
 

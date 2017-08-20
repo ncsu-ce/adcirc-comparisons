@@ -20,14 +20,14 @@ red = '/home/tristan/box/research/adcirc/python/Data/red/fort.14'
 # canalsub = '/home/tristan/Adcirc/canal/subdomain/fort.14'
 
 # Desktop
-# f1 = Fort14(scaled)
-# f2 = Fort14(full)
-# n = Nodeset([f1, f2])
+f1 = Fort14(scaled)
+f2 = Fort14(full)
+n = Nodeset([f1, f2])
 
-f1 = Fort14(red)
-f2 = Fort14(blue)
-f3 = Fort14(black)
-n = Nodeset([f1, f2, f3])
+# f1 = Fort14(red)
+# f2 = Fort14(blue)
+# f3 = Fort14(black)
+# n = Nodeset([f2, f1, f3])
 
 # f1 = Fort14(louisiana)
 # f2 = Fort14(full)
