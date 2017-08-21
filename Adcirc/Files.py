@@ -59,15 +59,17 @@ class Fort14(File):
 
         return self._nodes
 
-    def element_coordinates(self):
+    def element_coordinates(self, element_index=None):
         """Returns ndarray of coordinates that comprise all elements.
 
         Returns numpy array of shape (# elements, 3, 2) where each element in the array
         is a list of nodes, and each node is a list of x, y coordinates.
         """
 
-        self.message('Generating element coordinates')
-        return self._nodes[self._elements]
+        if element_index is None:
+            self.message('Generating element coordinates')
+            return self._nodes[self._elements]
+        return self._nodes[self._elements[element_index]]
 
     def centroids(self):
         """Returns ndarray of centroids of elements.
