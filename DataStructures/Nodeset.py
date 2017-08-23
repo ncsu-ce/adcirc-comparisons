@@ -182,6 +182,7 @@ class Nodeset(Printable):
 
             self.message('Mesh {} has {} calculable nodes'.format(m, len(barycentric_indices[m])))
 
+        print(barycentric_coordinates)
         return barycentric_indices, barycentric_coordinates
 
     def _find_all_nodes(self):

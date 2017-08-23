@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import scipy.spatial as sp
 from DataStructures.Datatypes import *
 from Utilities.Printable import Printable
 
@@ -99,3 +100,102 @@ class Fort14(File):
     def upper_right_bound(self):
 
         return self.bounds()[1]
+
+class FortND(File):
+
+    def __init__(self, file, name='FortND'):
+
+        super().__init__(file, name)
+
+        # Read the header
+        self._header = self.f.readline()
+
+        dat = self.f.readline().split()
+
+        # The total number of available datasets
+        self._num_datasets = int(dat[0])
+
+        # The total number of nodes
+        self._num_nodes = int(dat[1])
+
+        # The timestep interval at which data is written
+        self._timestep_interval = int(dat[3])
+
+        # The length of a timestep in seconds
+        self._dt = float(dat[2]) / self._timestep_interval
+
+        # Number of dimensions
+        self._ndims = int(dat[4])
+
+        # Header values, for interpolation
+        self._times = np.empty(self._num_datasets, dtype=np.float64)
+        self._iterations = np.empty(self._num_datasets, dtype=np.uint32)
+
+        # [(dataset, node, dimension)]
+        if self._ndims == 1:
+            self._data = np.empty((self._num_datasets, self._num_nodes), dtype=np.float64)
+        else:
+            self._data = np.empty((self._num_datasets, self._num_nodes, self._ndims), dtype=np.float64)
+
+    def load(self):
+
+        self.message('Loading entire file into memory')
+
+        for d in range(self._num_datasets):
+
+            dat = self.f.readline().split()
+
+            self._times[d] = float(dat[0])
+            self._iterations[d] = int(dat[1])
+            
+            if self._ndims == 1:
+
+                for n in range(self._num_nodes):
+
+                    dat = self.f.readline().split()
+                    self._data[d, n] = float(dat[1])
+
+            elif self._ndims == 2:
+
+                for n in range(self._num_nodes):
+
+                    dat = self.f.readline().split()
+                    self._data[d, n, 0] = float(dat[1])
+                    self._data[d, n, 1] = float(dat[2])
+
+            elif self._ndims == 3:
+
+                for n in range(self._num_nodes):
+                    dat = self.f.readline().split()
+                    self._data[d, n, 0] = float(dat[1])
+                    self._data[d, n, 1] = float(dat[2])
+                    self._data[d, n, 2] = float(dat[3])
+
+    def num_dimensions(self):
+
+        return self._ndims
+
+    def num_datasets(self):
+
+        return self._num_datasets
+
+    def times(self):
+
+        return self._times
+
+    def data(self):
+
+        return self._data
+
+
+class Fort63(FortND):
+
+    def __init__(self, file):
+
+        super().__init__(file)
+
+class Fort64(FortND):
+
+    def __init__(self, file):
+
+        super().__init__(file)
