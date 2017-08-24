@@ -107,6 +107,8 @@ class FortND(File):
 
         super().__init__(file, name)
 
+        self._loaded = False
+
         # Read the header
         self._header = self.f.readline()
 
@@ -139,37 +141,41 @@ class FortND(File):
 
     def load(self):
 
-        self.message('Loading entire file into memory')
+        if not self._loaded:
 
-        for d in range(self._num_datasets):
+            self.message('Loading entire file into memory')
 
-            dat = self.f.readline().split()
+            for d in range(self._num_datasets):
 
-            self._times[d] = float(dat[0])
-            self._iterations[d] = int(dat[1])
-            
-            if self._ndims == 1:
+                dat = self.f.readline().split()
 
-                for n in range(self._num_nodes):
+                self._times[d] = float(dat[0])
+                self._iterations[d] = int(dat[1])
 
-                    dat = self.f.readline().split()
-                    self._data[d, n] = float(dat[1])
+                if self._ndims == 1:
 
-            elif self._ndims == 2:
+                    for n in range(self._num_nodes):
 
-                for n in range(self._num_nodes):
+                        dat = self.f.readline().split()
+                        self._data[d, n] = float(dat[1])
 
-                    dat = self.f.readline().split()
-                    self._data[d, n, 0] = float(dat[1])
-                    self._data[d, n, 1] = float(dat[2])
+                elif self._ndims == 2:
 
-            elif self._ndims == 3:
+                    for n in range(self._num_nodes):
 
-                for n in range(self._num_nodes):
-                    dat = self.f.readline().split()
-                    self._data[d, n, 0] = float(dat[1])
-                    self._data[d, n, 1] = float(dat[2])
-                    self._data[d, n, 2] = float(dat[3])
+                        dat = self.f.readline().split()
+                        self._data[d, n, 0] = float(dat[1])
+                        self._data[d, n, 1] = float(dat[2])
+
+                elif self._ndims == 3:
+
+                    for n in range(self._num_nodes):
+                        dat = self.f.readline().split()
+                        self._data[d, n, 0] = float(dat[1])
+                        self._data[d, n, 1] = float(dat[2])
+                        self._data[d, n, 2] = float(dat[3])
+
+            self._loaded = True
 
     def num_dimensions(self):
 
