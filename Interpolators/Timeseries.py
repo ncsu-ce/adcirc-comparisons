@@ -5,7 +5,7 @@ class TimeseriesInterpolator(Printable):
 
     def __init__(self, fortND):
 
-        super().__init__('Timeseries Interpolator')
+        super().__init__('TS Interpolator')
 
         self._f = fortND
         self._times = self._f.times()
@@ -47,10 +47,12 @@ class TimeseriesInterpolator(Printable):
         # If it's the beginning or end, we'd have to extrapolate
         if i == 0:
             self.message('ERROR: Cannot interpolate before first timestep')
-            return
+            self.message('First timestep occurs at {} seconds'.format(self._times[0]))
+            exit()
         elif i == self._num_datasets:
             self.message('ERROR: Cannot interpolate past final timestep')
-            return
+            self.message('Last timestep occurs at {} seconds'.format(self._times[-1]))
+            exit()
 
         l = self._times[i - 1]
         r = self._times[i]

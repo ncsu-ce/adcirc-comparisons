@@ -16,6 +16,7 @@ class Nodeset(Printable):
         self._ur = None
 
         self._common_nodes = None
+        self._common_indices = None
         self._uncommon_nodes = None
 
         self._calculate_bounds()
@@ -24,6 +25,10 @@ class Nodeset(Printable):
             self._find_all_nodes()
         else:
             self._find_only_common_nodes()
+
+    def common_nodes(self):
+
+        return self._common_nodes, self._common_indices
 
     def _find_common_and_uncommon_nodes(self):
         """Returns a set of common nodes, a set of uncommon nodes, and a list of uncommon nodesets
@@ -76,6 +81,42 @@ class Nodeset(Printable):
             self.message('{} nodes missing from mesh {}'.format(len(uncommon_nodesets[m]), m))
 
         return common_nodes, uncommon_nodes, uncommon_nodesets
+
+    def _find_only_common_nodes(self):
+
+        self.message('Finding common nodes')
+
+        appears = defaultdict(lambda: array('l', [-1] * self._num_meshes))
+        common_nodes = dict()
+
+        for m in range(self._num_meshes):
+
+            nodal_coordinates, in_range = self._coordinates_in_range(m)
+
+            for n in range(nodal_coordinates.shape[0]):
+
+                if in_range[n]:
+
+                    appears[nodal_coordinates[n].tobytes()][m] = n
+
+        # Only include nodes that are in every mesh
+        for key, indices in appears.items():
+
+            if indices.count(-1) == 0:
+
+                common_nodes[key] = indices
+
+        # Store as numpy arrays
+        num_common_nodes = len(common_nodes)
+        self._common_nodes = np.empty((num_common_nodes, 2), dtype=np.float64)
+        self._common_indices = np.empty((num_common_nodes, self._num_meshes), dtype=np.uint32)
+
+        for index, (key, indices) in enumerate(common_nodes.items()):
+
+            self._common_nodes[index] = np.fromstring(key, np.float64, 2)
+            self._common_indices[index] = indices
+
+        self.message('Found {} common nodes'.format(num_common_nodes))
 
     def _build_searches(self):
         """Returns a list of searchable data structures, one for each mesh, as well as element index dictionaries
@@ -143,7 +184,6 @@ class Nodeset(Printable):
 
         return centroid_searches, centroid_dicts
 
-
     def _find_element_overlaps(self, nodesets, centroid_searches, centroid_dicts):
 
         self.message('Precalculating barycentric coordinates for node/element overlaps')
@@ -182,7 +222,7 @@ class Nodeset(Printable):
 
             self.message('Mesh {} has {} calculable nodes'.format(m, len(barycentric_indices[m])))
 
-        print(barycentric_coordinates)
+        # print(barycentric_coordinates)
         return barycentric_indices, barycentric_coordinates
 
     def _find_all_nodes(self):
@@ -190,34 +230,6 @@ class Nodeset(Printable):
         common_nodes, uncommon_nodes, uncommon_nodesets = self._find_common_and_uncommon_nodes()
         centroid_searches, centroid_dicts = self._build_searches()
         indices, coordinates = self._find_element_overlaps(uncommon_nodesets, centroid_searches, centroid_dicts)
-
-
-    def _find_only_common_nodes(self):
-
-        self.message('Finding common nodes')
-
-        self._common_nodes = set()
-        counter = Counter()
-
-        for m in range(self._num_meshes):
-
-            nodal_coordinates, in_range = self._coordinates_in_range(m)
-
-            # Count number of times each node appears
-            for n in range(nodal_coordinates.shape[0]):
-
-                if in_range[n]:
-
-                    counter[nodal_coordinates[n].tobytes()] += 1
-
-        # Only include nodes that are in every mesh
-        for key, counts in counter.items():
-
-            if counts == self._num_meshes:
-
-                self._common_nodes.add(key)
-
-        self.message('Found {} common nodes'.format(len(self._common_nodes)))
 
     def _calculate_bounds(self):
 
@@ -251,6 +263,8 @@ class Nodeset(Printable):
                 self._ur >= arr
             ), axis=1
         )
+
+
 
 def set_to_coordinate_array(s):
 

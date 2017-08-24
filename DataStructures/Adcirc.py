@@ -26,4 +26,4 @@ class AdcircRun(Printable):
         if isfile(d + 'fort.64'):
             self.velocity_timeseries = Fort64(d + 'fort.64')
         else:
-            self.elevation_timeseries = None
+            self.velocity_timeseries = None
