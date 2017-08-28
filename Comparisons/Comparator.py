@@ -43,6 +43,7 @@ class Comparator(Printable):
             # Accumulators
             cumulative_error = np.zeros((common_nodes.shape[0], len(runs)), dtype=np.float64)
             cumulative_values = np.zeros((common_nodes.shape[0], len(runs)), dtype=np.uint32)
+            maximum_error = np.zeros((common_nodes.shape[0], len(runs)), dtype=np.float64)
 
             self.message('Starting timestepping')
 
@@ -65,6 +66,7 @@ class Comparator(Printable):
 
                     np.add(cumulative_error[:,m], error, out=cumulative_error[:,m], where=~mask)
                     np.add(cumulative_values[:,m], 1, out=cumulative_values[:,m], where=~mask)
+                    np.maximum(maximum_error[:,m], error, out=maximum_error[:,m], where=~mask)
 
             self.finish_sameline()
 
@@ -73,5 +75,5 @@ class Comparator(Printable):
             np.divide(cumulative_error, cumulative_values, out=average_error, where=results_mask)
             average_error[~results_mask] = -99999.0
 
-            return common_nodes, average_error
+            return common_nodes, average_error, maximum_error
 

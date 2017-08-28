@@ -2,18 +2,26 @@ from Comparisons.Comparator import Comparator
 from DataStructures.Adcirc import AdcircRun
 import sys
 
-def compare(baseline, other, outfile):
+def compare(baseline, other, outdir):
 
     c = Comparator([])
-    nodes, errors = c.compare_elevation_timeseries(AdcircRun(baseline), [AdcircRun(other)])
+    nodes, errors, maximums = c.compare_elevation_timeseries(AdcircRun(baseline), [AdcircRun(other)])
 
-    with open(outfile, 'w') as f:
+    with open(outdir + '/average_error.csv', 'w') as f:
 
         f.write('x,y,error\n')
 
         for i in range(nodes.shape[0]):
 
             f.write('{},{},{}\n'.format(nodes[i, 0], nodes[i, 1], 'nan' if errors[i, 0] == -99999.0 else errors[i, 0]))
+
+    with open(outdir + '/maximum_error.csv', 'w') as f:
+
+        f.write('x,y,error\n')
+
+        for i in range(nodes.shape[0]):
+
+            f.write('{},{},{}\n'.format(nodes[i, 0], nodes[i, 1], 'nan' if errors[i, 0] == -99999.0 else maximums[i, 0]))
 
 if __name__ == '__main__':
 
@@ -27,4 +35,4 @@ if __name__ == '__main__':
 
     else:
 
-        print('Usage: python3 average_error.py [ADCIRC Run Directory] [ADCIRC Run Directory] [Output File]')
+        print('Usage: python3 average_error.py [ADCIRC Run Directory] [ADCIRC Run Directory] [Output directory]')
