@@ -1,3 +1,8 @@
 from Adcirc.FilesNC import Fort63NC
 
-f = Fort63NC('/home/tristan/box/adcirc/runs/qa-parallel/fort.63.nc')
+
+with Fort63NC('/home/tristan/box/adcirc/runs/netcdf/fran/fort.63.nc') as f:
+
+    # f.print_variables()
+    f.print_everything()
+    f.print_variables()

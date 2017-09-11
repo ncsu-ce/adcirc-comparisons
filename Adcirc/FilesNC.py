@@ -1,35 +1,84 @@
+from Utilities.Printable import Printable
 from netCDF4 import Dataset
 from scipy.io import netcdf
 import numpy as np
 
-class Fort63NC:
+class Fort63NC(Printable):
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._times = None
+        self._f.close()
 
     def __init__(self, file_path):
 
-        try:
-            f = netcdf.netcdf_file(file_path)
-            print(f.variables.keys())
+        super().__init__('NetCDF File (fort.63)')
 
-            time = f.variables['time']
-            x = f.variables['x']
-            y = f.variables['y']
-            z = f.variables['depth']
-            ele_ts = f.variables['zeta']
-            print(time.units)
-            print(len(time[:]))
-            print(x[:])
-            print(y[:])
-            print(z[:])
-            print(np.mean(ele_ts[:], axis=0))
+        self._f = netcdf.netcdf_file(file_path, 'r')
+        # print('Keys:')
+        # print(self._f.variables.keys())
 
-        except RuntimeError:
+        self._times = self._f.variables['time']
+        # print(self._times.shape)
+        # print(self._times.units)
+        # x = f.variables['x']
+        # y = f.variables['y']
+        # z = f.variables['depth']
+        # ele_ts = f.variables['zeta']
+        # print(time.units)
+        # print(len(time[:]))
+        # print(time[:])
+        # print(x[:])
+        # print(y[:])
+        # print(z[:])
+        # print(np.mean(ele_ts[:], axis=0))
 
-            print('Error.')
+    def print_everything(self):
 
-        finally:
+        keys = dir(self._f)
+        for key in keys:
+            if key[0] != '_' and key != 'variables':
+                value = getattr(self._f, key)
+                self.message('{:25} {}'.format(key, str(value)))
 
-            time = None
-            x = None
-            y = None
-            z = None
-            ele_ts = None
+    def print_variables(self):
+
+        keys = self._f.variables.keys()
+        for key in keys:
+            value = self._f.variables[key]
+            shape = value.shape
+            units = value.typecode()
+            size = value.itemsize()
+
+            i = 0
+            suffixes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+            sz = size
+            if len(shape) > 0:
+                sz *= shape[0]
+                if len(shape) > 1:
+                    sz *= shape[1]
+                while sz >= 1024 and i < len(suffixes)-1:
+                    sz /= 1024.0
+                    i += 1
+
+            hr_size = '{:7.2f} '.format(sz) + suffixes[i]
+
+            self.message('{:15} {:15} {:4} {}'.format(str(key), str(shape), str(units)+str(size), hr_size))
+
+    def num_dimensions(self):
+
+        return self._ndims
+
+    def num_datasets(self):
+
+        return self._num_datasets
+
+    def time(self):
+
+        return self._times
+
+    def data(self):
+
+        return self._data
