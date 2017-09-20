@@ -1,7 +1,5 @@
 from Utilities.Printable import Printable
-from netCDF4 import Dataset
 from scipy.io import netcdf
-import numpy as np
 
 class Fort63NC(Printable):
 
@@ -17,23 +15,16 @@ class Fort63NC(Printable):
         super().__init__('NetCDF File (fort.63)')
 
         self._f = netcdf.netcdf_file(file_path, 'r')
-        # print('Keys:')
-        # print(self._f.variables.keys())
-
         self._times = self._f.variables['time']
-        # print(self._times.shape)
-        # print(self._times.units)
-        # x = f.variables['x']
-        # y = f.variables['y']
-        # z = f.variables['depth']
-        # ele_ts = f.variables['zeta']
-        # print(time.units)
-        # print(len(time[:]))
-        # print(time[:])
-        # print(x[:])
-        # print(y[:])
-        # print(z[:])
-        # print(np.mean(ele_ts[:], axis=0))
+
+    def print_some(self, variable):
+
+        if variable in self._f.variables.keys():
+            v = self._f.variables[variable]
+            self.message('The first few values from variable {} - {}'.format(variable, v.shape))
+            for i in range(10):
+                self.message('\t{}'.format(v[i]))
+            v = None
 
     def print_everything(self):
 
