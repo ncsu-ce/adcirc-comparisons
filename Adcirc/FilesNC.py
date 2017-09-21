@@ -21,9 +21,12 @@ class Fort63NC(Printable):
 
         if variable in self._f.variables.keys():
             v = self._f.variables[variable]
+            l = v.shape[0]
             self.message('The first few values from variable {} - {}'.format(variable, v.shape))
             for i in range(10):
-                self.message('\t{}'.format(v[i]))
+                self.message('{}\t{}'.format(i, v[i]))
+            for i in range(l-10, l):
+                self.message('{}\t{}'.format(i, v[i]))
             v = None
 
     def print_everything(self):
