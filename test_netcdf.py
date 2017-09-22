@@ -8,10 +8,9 @@ from NC.Comparator import Comparator
 #     # f.print_variables()
 #     f.print_some('time')
 
-with Comparator([
-    '/home/tristan/box/adcirc/runs/netcdf/fran/fort.63.nc',
-    '/home/tristan/box/adcirc/runs/netcdf/fran/fort.63.nc'
-]) as test:
+with Comparator(
+    '/home/tristan/research/adcirc/runs/fran/fort.63.nc',
+    ['/home/tristan/research/adcirc/runs/fran/fort.63.nc']) as test:
 
     test.average_difference('zeta')
 
