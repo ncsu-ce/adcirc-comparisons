@@ -1,6 +1,7 @@
 from Utilities.Printable import Printable
 from NC.Nodeset import Nodeset
 from NC.Timestepper import CommonTimesteps
+from NC.Data import Accumulators, Variable
 from scipy.io import netcdf as nc
 import numpy as np
 
@@ -10,10 +11,27 @@ class Comparator(Printable):
 
         super().__init__('NetCDF Comparator')
 
-        self._baseline = nc.netcdf_file(baseline, 'r')
-        self._comps = [nc.netcdf_file(f, 'r') for f in self._cleanse_files(files)]
-        self._files = [self._baseline] + self._comps
-        self._nodeset = Nodeset([baseline]+files)
+        # The baseline against which all comparisons will be performed
+        baseline = self._cleanse_file(baseline)
+        if baseline is None:
+            self.error('There is no time variable in the baseline file, exiting')
+            exit(1)
+        self._base = nc.netcdf_file(baseline, 'r')
+
+        # The list of files to be compared to the baseline
+        self._comp = [nc.netcdf_file(f, 'r') for f in self._cleanse_files(files)]
+        if len(self._comp) == 0:
+            self.error('None of the provided files contain a time variable, exiting')
+            exit(1)
+
+        # The list of all runs, baseline and comparisons included
+        self._runs = [self._base] + self._comp
+
+        # The nodeset at which to calculate comparisons
+        self._nodeset = Nodeset(self._runs)
+
+        # The time variable for every run
+        self._times = [f.variables['time'] for f in self._runs]
 
     def __enter__(self):
         return self
@@ -22,79 +40,69 @@ class Comparator(Printable):
 
         # Destroy any references to netcdf variables
         self._nodeset = None
-        self._baseline = None
-        self._comps = None
+        self._base = None
+        self._comp = None
+        self._times = None
 
         # Close all files
         self.message('Closing all netcdf files')
 
-        for f in self._files:
+        for f in self._runs:
             f.close()
 
-    def average_difference(self, variable):
+    def avg_difference(self, variable):
 
         self.message('Calculating average difference for variable \'{}\''.format(variable))
 
-        # Load the variable from every file
-        times = self._load_variable('time')
-        variables = self._load_variable(variable)
-        baseline = variables[0]
-        comps = variables[1:]
+        # Retrieve the baseline and comparison variables
+        base, comp = self._load_variable(variable)
 
-        # Ensure variable present in all files
-        if variables is None:
-            self.message('Variable {} missing from one of the data files'.format(variable))
-            return
+        # Create the accumulators
+        accumulators = Accumulators(len(comp), self._nodeset.num_nodes(), np.float64)
 
-        # Get the common nodes and nodal indices
-        common_nodes, common_indices = self._nodeset.common_nodes()
-        print(common_nodes)
-        print(common_indices)
-        print(common_nodes.shape)
-        print(baseline.shape)
+        # Create the timestepper
+        timestepper = CommonTimesteps(self._times)
 
-        # Create accumulators
-        cumulative_difference = np.zeros((common_nodes.shape[0], len(comps)), dtype=np.float64)
-        cumulative_values = np.zeros((common_nodes.shape[0], len(comps)), dtype=np.uint32)
-
-        timestepper = CommonTimesteps(times)
+        # Loop and calculate
         while timestepper.has_next_timestep():
 
-            # Get the index of the current timestep for each dataset
-            time, indices = timestepper.next_timestep()
+            # Get the next timestep
+            model_time, time_indices = timestepper.next_timestep()
+            tindex_base = time_indices[0]
+            tindex_comp = time_indices[1:]
+
+            self.message_sameline('Calculating average difference at time {}'.format(model_time))
 
             # Get the baseline values
-            baseline_values = baseline[indices[0],:]
+            val_base = base.timestep(tindex_base)
 
-            # Get the values from all others
-            comp_values = [comp[indices[i]] for i, comp in enumerate(comps)]
-            print(baseline_values.shape, list(map(lambda c: c.shape, comp_values)))
+            for c, cmp in enumerate(comp):
 
-            # Loop through each file and calculate difference
-            for c, comp_value in enumerate(comp_values):
+                # Get the comparison value
+                val_comp = cmp.timestep(tindex_comp[c])
 
-                # Calculate difference (array subtraction)
-                difference = baseline_values - comp_value
+                # Calculate the absolute value of the difference
+                difference = np.abs(val_base - val_comp)
 
-                # Add to accumulators
-                np.add(cumulative_difference[:,c], difference, out=cumulative_difference[:,c])
-                np.add(cumulative_values[:,c], 1, out=cumulative_difference[:,c])
+                # Add to the appropriate accumulator
+                accumulators[c].add(difference)
 
-            # Calculate averages
-            average_difference = np.empty(cumulative_difference.shape, dtype=np.float64)
-            np.divide(cumulative_difference, cumulative_values, out=average_difference)
+        self.finish_sameline()
 
-            print(average_difference)
+        # Calculate the average
+        return [acc.average() for acc in accumulators]
 
-            # print(time, indices)
+    def _cleanse_file(self, file):
 
-    def _load_variable(self, variable):
+        with nc.netcdf_file(file, 'r') as f:
 
-        for f in self._files:
-            if variable not in f.variables.keys():
-                return None
+            if 'time' in f.variables.keys():
 
-        return [f.variables[variable] for f in self._files]
+                f.close()
+                return file
+
+            f.close()
+            self.warning('{} does not contain time variable, it will be excluded'.format(file))
 
     def _cleanse_files(self, files):
 
@@ -102,17 +110,32 @@ class Comparator(Printable):
 
         for file in files:
 
-            with nc.netcdf_file(file, 'r') as f:
+            clean = self._cleanse_file(file)
 
-                if 'time' in f.variables.keys():
+            if clean is not None:
 
-                    cleansed.append(file)
-
-                else:
-
-                    self.warning('{} does not contain time variable, it will be excluded'.format(file))
-
-                f.close()
+                cleansed.append(clean)
 
         return cleansed
 
+    def _load_variable(self, variable):
+
+        # Check that the variable exists in all files
+        for f in self._runs:
+            if variable not in f.variables.keys():
+                self.error('Variable \'{}\' missing from file, exiting')
+                exit(1)
+
+        # Create the baseline variable
+        var = self._base.variables[variable]
+        nodal_indices = self._nodeset.common_indices(0)
+        base = Variable(var, nodal_indices)
+
+        # Create each comparison variable
+        comp = []
+        for i, _comp in enumerate(self._comp):
+            var = _comp.variables[variable]
+            nodal_indices = self._nodeset.common_indices(i+1)
+            comp.append(Variable(var, nodal_indices))
+
+        return base, comp

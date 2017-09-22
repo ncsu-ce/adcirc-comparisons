@@ -1,5 +1,4 @@
 from Utilities.Printable import Printable
-from scipy.io import netcdf as nc
 from array import array
 from collections import defaultdict
 import numpy as np
@@ -18,39 +17,40 @@ class Nodeset(Printable):
 
     def common_nodes(self):
 
-        return self._common_nodes, self._common_indices
+        return self._common_nodes
+
+    def common_indices(self, index):
+
+        return self._common_indices[:,index]
+
+    def num_nodes(self):
+
+        return self._common_nodes.shape[0]
 
     def _find_common_nodes(self):
 
+        self.message('Finding common nodes')
+
         nodal_indices = defaultdict(lambda: array('l', [-1] * len(self._files)))
 
-        for file_index, file in enumerate(self._files):
+        for file_index, f in enumerate(self._files):
 
-            with nc.netcdf_file(file, 'r') as f:
+            keys = f.variables.keys()
 
-                keys = f.variables.keys()
+            if 'x' in keys and 'y' in keys:
 
-                if 'x' in keys and 'y' in keys:
+                x = f.variables['x']
+                y = f.variables['y']
 
-                    x = f.variables['x']
-                    y = f.variables['y']
+                if x.shape == y.shape:
 
-                    if x.shape == y.shape:
+                    coordinates = np.empty((x.shape[0], 2))
+                    coordinates[:,0] = x[:]
+                    coordinates[:,1] = y[:]
 
-                        coordinates = np.empty((x.shape[0], 2))
-                        coordinates[:,0] = x[:]
-                        coordinates[:,1] = y[:]
+                    for index, coord in enumerate(coordinates):
 
-                        for index, coord in enumerate(coordinates):
-
-                            nodal_indices[coord.tobytes()][file_index] = index
-
-                    x = None
-                    y = None
-
-                keys = None
-
-                f.close()
+                        nodal_indices[coord.tobytes()][file_index] = index
 
 
         common_nodes = dict()

@@ -1,18 +1,21 @@
 from Adcirc.FilesNC import Fort63NC
 from NC.Nodeset import Nodeset
 from NC.Comparator import Comparator
+from NC.Data import Variable
+from scipy.io import netcdf as nc
 
-# with Fort63NC('/home/tristan/box/adcirc/runs/netcdf/fran/fort.63.nc') as f:
+f63 = '/home/tristan/box/adcirc/runs/netcdf/fran/fort.63.nc'
+
+# with Fort63NC('/home/tristan/box/adcirc/runs/netcdf/fran/fort.64.nc') as f:
 #
 #     # f.print_everything()
-#     # f.print_variables()
+#     f.print_variables()
 #     f.print_some('time')
 
-with Comparator(
-    '/home/tristan/research/adcirc/runs/fran/fort.63.nc',
-    ['/home/tristan/research/adcirc/runs/fran/fort.63.nc']) as test:
+with Comparator(f63, [f63]) as test:
 
-    test.average_difference('zeta')
+    average_elevation_error = test.avg_difference('zeta')
+    print(average_elevation_error)
 
 # nodes, indices = test.common_nodes()
 # print(nodes[0], indices[0])
@@ -28,3 +31,11 @@ with Comparator(
 # print(i)
 # i = next_common_timestep(times, i)
 # print(i)
+
+#
+# f = nc.netcdf_file(f63, 'r')
+# test = Variable(f.variables['zeta'], [0, 1, 2])
+# for i in range(10):
+#     print(test.timestep(0, 1)(i/10))
+# test = None
+# f.close()
