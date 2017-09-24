@@ -29,8 +29,6 @@ class Variable(Printable):
         self._nodal_indices = nodal_indices
         self._null_val = null_val
 
-        self.message('Variable created with shape', nc_variable.shape, nodal_indices.shape)
-
     def timestep(self, *index):
 
         ts = None

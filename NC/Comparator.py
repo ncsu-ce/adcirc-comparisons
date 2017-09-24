@@ -92,6 +92,10 @@ class Comparator(Printable):
         # Calculate the average
         return [acc.average() for acc in accumulators]
 
+    def nodeset(self):
+
+        return self._nodeset
+
     def _cleanse_file(self, file):
 
         with nc.netcdf_file(file, 'r') as f:

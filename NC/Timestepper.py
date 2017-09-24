@@ -37,6 +37,11 @@ class CommonTimesteps(Timestepper):
         self._array_lengths = [a.shape[0] for a in self._arrays]
         self._values = [self._arrays[i][index] for i, index in enumerate(self._indices)]
 
+        # Inform
+        print(self._array_lengths)
+        for i in range(len(self._array_lengths)):
+            self.message('Timestep range ({}, {})'.format(self._arrays[i][0], self._arrays[i][-1]))
+
         # Advance until we find the first common timestep
         while not self._are_common():
 

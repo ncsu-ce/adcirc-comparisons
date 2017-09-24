@@ -2,9 +2,12 @@ from Adcirc.FilesNC import Fort63NC
 from NC.Nodeset import Nodeset
 from NC.Comparator import Comparator
 from NC.Data import Variable
+from NC.Writer import GeoWriter
 from scipy.io import netcdf as nc
 
-f63 = '/home/tristan/box/adcirc/runs/netcdf/fran/fort.63.nc'
+# f63 = '/home/tristan/box/adcirc/runs/netcdf/fran/fort.63.nc'
+f63 = '/home/tristan/research/adcirc/runs/fran/fort.63.nc'
+res = '/home/tristan/research/adcirc/runs/fran/results.nc'
 
 # with Fort63NC('/home/tristan/box/adcirc/runs/netcdf/fran/fort.64.nc') as f:
 #
@@ -14,8 +17,15 @@ f63 = '/home/tristan/box/adcirc/runs/netcdf/fran/fort.63.nc'
 
 with Comparator(f63, [f63]) as test:
 
+    nodeset = test.nodeset()
+    nodes = nodeset.common_nodes()
+
     average_elevation_error = test.avg_difference('zeta')
-    print(average_elevation_error)
+
+    with GeoWriter(res, nodes) as f:
+
+        f.write_variable('error', average_elevation_error[0])
+
 
 # nodes, indices = test.common_nodes()
 # print(nodes[0], indices[0])
