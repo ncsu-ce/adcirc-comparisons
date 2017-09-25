@@ -2,12 +2,13 @@ from Adcirc.FilesNC import Fort63NC
 from NC.Nodeset import Nodeset
 from NC.Comparator import Comparator
 from NC.Data import Variable
-from NC.Writer import GeoWriter
+from NC.Writer import GeoWriter, GriddedGeoWriter
 from scipy.io import netcdf as nc
 
-# f63 = '/home/tristan/box/adcirc/runs/netcdf/fran/fort.63.nc'
-f63 = '/home/tristan/research/adcirc/runs/fran/fort.63.nc'
-res = '/home/tristan/research/adcirc/runs/fran/results.nc'
+f63 = '/home/tristan/box/adcirc/runs/netcdf/fran/fort.63.nc'
+res = '/home/tristan/box/adcirc/runs/netcdf/fran/results.nc'
+# f63 = '/home/tristan/research/adcirc/runs/fran/fort.63.nc'
+# res = '/home/tristan/research/adcirc/runs/fran/results.nc'
 
 # with Fort63NC('/home/tristan/box/adcirc/runs/netcdf/fran/fort.64.nc') as f:
 #
@@ -22,7 +23,7 @@ with Comparator(f63, [f63]) as test:
 
     average_elevation_error = test.avg_difference('zeta')
 
-    with GeoWriter(res, nodes) as f:
+    with GriddedGeoWriter(res, nodes, 500) as f:
 
         f.write_variable('error', average_elevation_error[0])
 
